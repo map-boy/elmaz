@@ -1,0 +1,6 @@
+﻿-keep class com.nyumbahub.** { *; }
+-keep class com.google.firebase.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**

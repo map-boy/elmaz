@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/config/admin) &&
+        get(/databases/$(database)/documents/config/admin).data.get('adminUids', []).hasAny([request.auth.uid]);
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (resource.data.listerId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && (resource.data.listerId == request.auth.uid || isAdmin());
+    }
+
+    match /motors/{motorId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (resource.data.listerId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && (resource.data.listerId == request.auth.uid || isAdmin());
+    }
+
+    match /savedListings/{userId}/{listingId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /inquiries/{inquiryId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.ownerId || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.senderId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    match /inquiries/{inquiryId}/messages/{messageId} {
+      allow read, create: if request.auth != null;
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    match /subscriptions/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /notifications/{userId}/items/{itemId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /home_ads/{adId} {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    match /agents/{agentId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
