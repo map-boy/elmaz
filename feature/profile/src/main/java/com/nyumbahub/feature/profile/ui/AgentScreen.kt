@@ -1,4 +1,7 @@
-﻿package com.nyumbahub.feature.profile.ui
+package com.nyumbahub.feature.profile.ui
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,7 +70,8 @@ fun AgentScreen(
     onBack: () -> Unit,
     onAgentClick: (String) -> Unit
 ) {
-    var agents by remember { mutableStateOf(demoAgents) }
+    var agents by remember { mutableStateOf(emptyList<Agent>()) }
+    var isLoading by remember { mutableStateOf(true) }
     var selectedCity by remember { mutableStateOf("All") }
 
     LaunchedEffect(Unit) {
@@ -91,7 +95,10 @@ fun AgentScreen(
                         )
                     } catch (e: Exception) { null }
                 }
-                if (fetched.isNotEmpty()) agents = fetched + demoAgents.filter { d -> fetched.none { it.id == d.id } }
+                agents = fetched
+                isLoading = false
+            }
+            .addOnFailureListener { isLoading = false
             }
     }
     var searchQuery  by remember { mutableStateOf("") }
@@ -146,6 +153,19 @@ fun AgentScreen(
                 }
             }
 
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = NavyPrimary)
+            }
+        } else if (filtered.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(56.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text("No agents available yet", color = Color.Gray, fontSize = 14.sp)
+                }
+            }
+        } else {
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -158,6 +178,7 @@ fun AgentScreen(
                 items(filtered) { agent ->
                     AgentCard(agent = agent, onClick = { onAgentClick(agent.id) })
                 }
+        }
             }
         }
     }
@@ -165,6 +186,7 @@ fun AgentScreen(
 
 @Composable
 private fun AgentCard(agent: Agent, onClick: () -> Unit) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
@@ -217,7 +239,7 @@ private fun AgentCard(agent: Agent, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                AgentStat("⭐ ${agent.rating}", "Rating")
+                AgentStat("\u2b50 ${agent.rating}", "Rating")
                 AgentStat("${agent.totalListings}", "Listings")
                 AgentStat("${agent.yearsExperience} yrs", "Experience")
                 AgentStat(agent.speciality, "Speciality")
@@ -225,7 +247,11 @@ private fun AgentCard(agent: Agent, onClick: () -> Unit) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
-                    onClick = {},
+                    onClick = {
+                        if (agent.phone.isNotBlank()) {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + agent.phone)))
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(40.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
@@ -235,7 +261,11 @@ private fun AgentCard(agent: Agent, onClick: () -> Unit) {
                     Text("Call", fontSize = 13.sp)
                 }
                 Button(
-                    onClick = {},
+                    onClick = {
+                        if (agent.phone.isNotBlank()) {
+                            context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + agent.phone)))
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(40.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary)

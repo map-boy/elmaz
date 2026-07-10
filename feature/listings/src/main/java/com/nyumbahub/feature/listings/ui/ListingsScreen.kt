@@ -478,8 +478,12 @@ private fun HorizontalListingCard(listing: Listing, onClick: () -> Unit) {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text("${listing.currency} ${"%,.0f".format(listing.price)}", color = OrangeAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(listing.title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${listing.bedrooms}bd · ${listing.bathrooms}ba · ${listing.location.neighbourhood}",
-                    fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val neighbourhoodText = listing.location.neighbourhood.takeIf {
+    it.isNotBlank() && !it.equals("none", ignoreCase = true)
+}
+Text(
+    listOfNotNull("${listing.bedrooms}bd", "${listing.bathrooms}ba", neighbourhoodText).joinToString(" \u00b7 "),
+    fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

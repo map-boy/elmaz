@@ -33,6 +33,7 @@ class PostListingViewModel @Inject constructor(
         listingType: ListingType = ListingType.RENT,
         propertyType: PropertyType = PropertyType.HOUSE,
         furnished: Boolean = false,
+        amenities: List<String> = emptyList(),
         imageUrls: List<String> = emptyList()
     ) {
         viewModelScope.launch {
@@ -48,6 +49,7 @@ class PostListingViewModel @Inject constructor(
                 type          = listingType,
                 propertyType  = propertyType,
                 furnished     = furnished,
+                amenities     = amenities,
                 photos        = imageUrls,
                 listerId      = listerId,
                 status        = ListingStatus.ACTIVE,
@@ -70,4 +72,3 @@ sealed class PostUiState {
     object Success : PostUiState()
     data class Error(val message: String) : PostUiState()
 }
-

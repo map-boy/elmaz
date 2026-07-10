@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.app
+package com.nyumbahub.app
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,7 +38,7 @@ fun FavoritesScreen(
         savedIds.forEach { id ->
             if (id.isBlank()) { done++; if (done == savedIds.size) firestoreListings = fetched.toList(); return@forEach }; db.collection("listings").document(id).get()
                 .addOnCompleteListener { task ->
-                    try { task.result?.toObject(com.nyumbahub.core.domain.model.Listing::class.java)?.let { fetched.add(it) } } catch (e: Exception) { }
+                    try { task.result?.toObject(com.nyumbahub.core.domain.model.Listing::class.java)?.let { fetched.add(it) } } catch (e: Exception) { android.util.Log.e("FavoritesScreen", "Failed to parse favorite listing", e) }
                     done++
                     if (done == savedIds.size) firestoreListings = fetched.toList()
                 }

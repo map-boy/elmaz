@@ -8,6 +8,7 @@ import com.nyumbahub.core.domain.repository.ListingRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
@@ -57,18 +58,30 @@ class ListingRepositoryImpl @Inject constructor(
         col.document(id).delete().await()
     }
 
-    override suspend fun saveListing(listingId: String): Result<Unit> = runCatching {
-        firestore.collection("savedListings").document(listingId)
+    override suspend fun saveListing(userId: String, listingId: String): Result<Unit> = runCatching {
+        firestore.collection("savedListings").document(userId)
+            .collection("items").document(listingId)
             .set(mapOf("listingId" to listingId, "savedAt" to System.currentTimeMillis())).await()
     }
 
-    override suspend fun unsaveListing(listingId: String): Result<Unit> = runCatching {
-        firestore.collection("savedListings").document(listingId).delete().await()
+    override suspend fun unsaveListing(userId: String, listingId: String): Result<Unit> = runCatching {
+        firestore.collection("savedListings").document(userId)
+            .collection("items").document(listingId).delete().await()
     }
 
-    override fun getSavedListings(): Flow<List<Listing>> = callbackFlow {
-        val sub = firestore.collection("savedListings").addSnapshotListener { snap, _ ->
-            snap?.let { trySend(emptyList()) }
+    override fun getSavedListings(userId: String): Flow<List<Listing>> = callbackFlow {
+        val itemsCol = firestore.collection("savedListings").document(userId).collection("items")
+        val sub = itemsCol.addSnapshotListener { snap, _ ->
+            if (snap == null) return@addSnapshotListener
+            val ids = snap.documents.mapNotNull { it.getString("listingId") }
+            if (ids.isEmpty()) {
+                trySend(emptyList())
+            } else {
+                launch {
+                    val listings = ids.mapNotNull { id -> getListingById(id) }
+                    trySend(listings)
+                }
+            }
         }
         awaitClose { sub.remove() }
     }
@@ -77,6 +90,14 @@ class ListingRepositoryImpl @Inject constructor(
         val id = UUID.randomUUID().toString()
         val withId = inquiry.copy(id = id)
         firestore.collection("inquiries").document(id).set(withId).await()
+        val msgData = mapOf(
+            "senderId" to inquiry.senderId,
+            "text"     to message,
+            "sentAt"   to withId.createdAt,
+            "readAt"   to null
+        )
+        firestore.collection("inquiries").document(id)
+            .collection("messages").add(msgData).await()
         withId
     }
 
@@ -91,3 +112,4 @@ class ListingRepositoryImpl @Inject constructor(
         col.document(id).update("viewCount", com.google.firebase.firestore.FieldValue.increment(1)).await()
     }
 }
+

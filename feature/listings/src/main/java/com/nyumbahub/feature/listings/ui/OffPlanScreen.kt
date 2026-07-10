@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.feature.listings.ui
+package com.nyumbahub.feature.listings.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,7 +62,8 @@ fun OffPlanScreen(
     onBack: () -> Unit,
     onProjectClick: (String) -> Unit
 ) {
-    var projects by remember { mutableStateOf(demoOffPlan) }
+    var projects by remember { mutableStateOf(emptyList<OffPlanProject>()) }
+    var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -87,8 +88,10 @@ fun OffPlanScreen(
                         )
                     } catch (e: Exception) { null }
                 }
-                if (fetched.isNotEmpty()) projects = fetched + demoOffPlan.filter { d -> fetched.none { it.id == d.id } }
+                projects = fetched
+                isLoading = false
             }
+            .addOnFailureListener { isLoading = false }
     }
     Scaffold(
         topBar = {
@@ -107,6 +110,19 @@ fun OffPlanScreen(
         },
         containerColor = Color(0xFFF5F5F5)
     ) { padding ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = NavyPrimary)
+            }
+        } else if (projects.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Build, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(56.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text("No off-plan projects available yet", color = Color.Gray, fontSize = 14.sp)
+                }
+            }
+        } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
@@ -140,6 +156,7 @@ fun OffPlanScreen(
             items(projects) { project ->
                 OffPlanCard(project = project, onClick = { onProjectClick(project.id) })
             }
+        }
         }
     }
 }

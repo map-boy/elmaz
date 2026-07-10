@@ -3,12 +3,17 @@
 data class Inquiry(
     val id: String = "",
     val listingId: String = "",
-    val seekerId: String = "",
-    val listerId: String = "",
+    val listingTitle: String = "",
+    val senderId: String = "",
+    val senderName: String = "",
+    val ownerId: String = "",
+    val ownerName: String = "",
+    val lastMessage: String = "",
     val status: InquiryStatus = InquiryStatus.OPEN,
-    val createdAt: Long = 0L
+    val unreadBySender: Long = 0L,
+    val unreadByOwner: Long = 0L,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
 )
 
-enum class InquiryStatus {
-    OPEN, REPLIED, CLOSED
-}
+enum class InquiryStatus { OPEN, REPLIED, CLOSED }

@@ -22,97 +22,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.nyumbahub.core.domain.model.*
 import com.nyumbahub.core.ui.FavoritesStore
 import com.nyumbahub.core.ui.components.StatChip
-import java.util.UUID
-
-data class ListerInfo(
-    val displayName: String = "",
-    val phone: String = "",
-    val email: String = "",
-    val agency: String = "",
-    val isVerified: Boolean = false
-)
+import com.nyumbahub.feature.listings.viewmodel.ListingDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListingDetailScreen(
     listingId: String,
     onBack: () -> Unit,
-    onInquiry: (String) -> Unit
+    onInquiry: (String) -> Unit,
+    viewModel: ListingDetailViewModel = hiltViewModel()
 ) {
-    var listing by remember { mutableStateOf<Listing?>(null) }
-    var listerInfo by remember { mutableStateOf<ListerInfo?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isCreatingInquiry by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+    val listing = uiState.listing
+    val listerInfo = uiState.listerInfo
+    val isLoading = uiState.isLoading
+    val isCreatingInquiry = uiState.isCreatingInquiry
     val isSaved by remember { derivedStateOf { FavoritesStore.isSaved(listingId) } }
     val context = LocalContext.current
-    val currentUser = FirebaseAuth.getInstance().currentUser
 
     LaunchedEffect(listingId) {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("listings").document(listingId).get()
-            .addOnSuccessListener { doc ->
-                try { listing = doc.toObject(Listing::class.java) } catch (e: Exception) { }
-                isLoading = false
-                // Load lister info
-                val listerId = listing?.listerId ?: doc.getString("listerId") ?: ""
-                if (listerId.isNotEmpty()) {
-                    db.collection("users").document(listerId).get()
-                        .addOnSuccessListener { userDoc ->
-                            listerInfo = ListerInfo(
-                                displayName = userDoc.getString("displayName") ?: userDoc.getString("name") ?: "Owner",
-                                phone       = userDoc.getString("phone") ?: "",
-                                email       = userDoc.getString("email") ?: "",
-                                agency      = userDoc.getString("agency") ?: "",
-                                isVerified  = userDoc.getBoolean("isVerified") ?: false
-                            )
-                        }
-                }
-            }
-            .addOnFailureListener { isLoading = false }
+        viewModel.load(listingId)
     }
 
     fun createInquiryAndChat() {
-        val l = listing ?: return
-        val uid = currentUser?.uid ?: return
-        isCreatingInquiry = true
-        val db = FirebaseFirestore.getInstance()
-        val inquiryId = UUID.randomUUID().toString()
-        val senderName = currentUser.displayName ?: currentUser.email ?: "User"
-        val ownerName = listerInfo?.displayName ?: "Owner"
-        val data = mapOf(
-            "id"           to inquiryId,
-            "listingId"    to listingId,
-            "listingTitle" to l.title,
-            "senderId"     to uid,
-            "senderName"   to senderName,
-            "ownerId"      to l.listerId,
-            "ownerName"    to ownerName,
-            "lastMessage"  to "Hi, I'm interested in ${l.title}",
-            "createdAt"    to System.currentTimeMillis(),
-            "status"       to "open"
-        )
-        db.collection("inquiries").document(inquiryId).set(data)
-            .addOnSuccessListener {
-                // Send first automated message
-                val msgData = mapOf(
-                    "senderId" to uid,
-                    "text"     to "Hi, I'm interested in ${l.title}. Is it still available?",
-                    "sentAt"   to System.currentTimeMillis(),
-                    "readAt"   to null
-                )
-                db.collection("inquiries").document(inquiryId)
-                    .collection("messages").add(msgData)
-                    .addOnCompleteListener {
-                        isCreatingInquiry = false
-                        onInquiry(inquiryId)
-                    }
-            }
-            .addOnFailureListener { isCreatingInquiry = false }
+        viewModel.sendInquiry(onSuccess = { inquiryId -> onInquiry(inquiryId) })
     }
 
     Scaffold(
@@ -372,3 +309,5 @@ fun ListingDetailScreen(
         }
     }
 }
+
+

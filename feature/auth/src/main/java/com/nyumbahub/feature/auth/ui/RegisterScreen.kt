@@ -1,4 +1,4 @@
-package com.nyumbahub.feature.auth.ui
+﻿package com.nyumbahub.feature.auth.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +21,7 @@ import com.nyumbahub.core.ui.components.NyumbaHubLogo
 import com.nyumbahub.core.ui.theme.NavyPrimary
 import com.nyumbahub.core.ui.theme.OrangeAccent
 import com.nyumbahub.feature.auth.viewmodel.AuthUiState
+import com.nyumbahub.core.domain.model.UserRole
 import com.nyumbahub.feature.auth.viewmodel.AuthViewModel
 
 private enum class RegisterMode { PICKER, USER, AGENT }
@@ -209,13 +210,7 @@ private fun AgentRegisterForm(uiState: AuthUiState, viewModel: AuthViewModel, on
                 Spacer(Modifier.height(8.dp))
             }
             Button(onClick = {
-                    viewModel.signUp(email, password, name)
-                    val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                    if (uid != null) {
-                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                            .collection("users").document(uid)
-                            .update(mapOf("role" to "commissioner", "agency" to agency, "phone" to phone))
-                    }
+                    viewModel.signUp(email, password, name, role = UserRole.AGENT, agency = agency, phone = phone)
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = uiState !is AuthUiState.Loading,
@@ -228,6 +223,7 @@ private fun AgentRegisterForm(uiState: AuthUiState, viewModel: AuthViewModel, on
         }
     }
 }
+
 
 
 

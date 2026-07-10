@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.app
+package com.nyumbahub.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -210,7 +210,17 @@ private fun AdminUsersTab() {
                 }
             }
             items(regularUsers, key = { it["_id"].toString() }) { user ->
-                AdminUserCard(user = user, isCommissioner = false, verifyingId = verifyingId, onVerify = {}, onDelete = { uid ->
+                AdminUserCard(user = user, isCommissioner = false, verifyingId = verifyingId,
+                    onVerify = { uid ->
+                        verifyingId = uid
+                        FirebaseFirestore.getInstance().collection("users").document(uid)
+                            .update(mapOf("isVerified" to true, "verifiedAt" to System.currentTimeMillis()))
+                            .addOnSuccessListener {
+                                users = users.map { u -> if (u["_id"] == uid) u.toMutableMap().also { it["isVerified"] = true } else u }
+                                verifyingId = null
+                            }.addOnFailureListener { verifyingId = null }
+                    },
+                    onDelete = { uid ->
                     FirebaseFirestore.getInstance().collection("users").document(uid).delete()
                         .addOnSuccessListener { users = users.filter { it["_id"] != uid } }
                 })
@@ -624,7 +634,7 @@ private fun AdminSubscriptionsTab() {
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("All Users — Manage Subscriptions", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("All Users � Manage Subscriptions", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
             items(users, key = { it["_id"].toString() }) { user ->
                 val uid = user["_id"] as? String ?: ""

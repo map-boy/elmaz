@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -17,6 +17,7 @@ android {
     buildFeatures { compose = true }
 }
 dependencies {
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
@@ -34,6 +35,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
 }
+
 
 
 

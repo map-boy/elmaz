@@ -49,10 +49,11 @@ fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     var mode by remember { mutableStateOf(LoginMode.PICKER) }
 
-    LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) onNavigateToHome()
+    LaunchedEffect(uiState, isLoggedIn) {
+        if (uiState is AuthUiState.Success || isLoggedIn) onNavigateToHome()
     }
 
     when (mode) {
@@ -152,7 +153,7 @@ private fun GoogleSignInButton(onToken: (String) -> Unit, isLoading: Boolean) {
             try {
                 val account = GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)
                 account.idToken?.let { onToken(it) }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { android.util.Log.e("LoginScreen", "Google sign-in failed", e) }
         }
     }
     OutlinedButton(
@@ -445,4 +446,5 @@ private fun AgentLoginForm(
         }
     }
 }
+
 

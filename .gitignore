@@ -1,7 +1,7 @@
-﻿# Android / Gradle
+# Android / Gradle
 *.iml
 .gradle/
-/local.properties
+local.properties
 /.idea/
 **/build/
 /captures
@@ -12,7 +12,7 @@
 .externalNativeBuild
 .env
 
-# Keys & secrets — NEVER commit these
+# Keys & secrets � NEVER commit these
 google-services.json
 *.keystore
 *.jks
@@ -24,3 +24,14 @@ Thumbs.db
 
 scripts/serviceAccount.json
 scripts/node_modules/
+
+keystore.properties
+all_source_dump.txt
+app_overview.txt
+block_report_hits.txt
+collections_context.txt
+delete_check.txt
+delete_check2.txt
+firestore_collections.txt
+owner_fields.txt
+NyumbaHub_Inquiry_Feature_Full.txt

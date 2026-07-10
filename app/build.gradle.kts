@@ -1,9 +1,10 @@
-﻿import java.util.Properties
-
+import java.util.Properties
 val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
-
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -29,11 +30,23 @@ android {
         versionCode   = 1
         versionName   = "1.0.0"
         manifestPlaceholders["MAPS_API_KEY"] = localProps["MAPS_API_KEY"] ?: ""
+        buildConfigField("String", "HF_TOKEN", "\"${localProps["HF_TOKEN"] ?: ""}\"")
+        buildConfigField("String", "HF_MODEL", "\"${localProps["HF_MODEL"] ?: "openai/gpt-oss-120b:cerebras"}\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"${localProps["GROQ_API_KEY"] ?: ""}\"")
         buildFeatures { buildConfig = true }
+    }
+    signingConfigs {
+        create("release") {
+            storeFile     = rootProject.file(keystoreProps["storeFile"] as String)
+            storePassword = keystoreProps["storePassword"] as String
+            keyAlias      = keystoreProps["keyAlias"] as String
+            keyPassword   = keystoreProps["keyPassword"] as String
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig   = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -73,6 +86,3 @@ dependencies {
     implementation(project(":feature:motors"))
     implementation(project(":feature:profile"))
 }
-
-
-

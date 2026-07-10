@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.app
+package com.nyumbahub.app
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -42,7 +42,8 @@ fun ChatsScreen(
     onChatClick: (String) -> Unit,
     onLoginRequired: () -> Unit,
     onExplore: () -> Unit,
-    onPostAd: () -> Unit
+    onPostAd: () -> Unit,
+    onWandaaAiClick: () -> Unit
 ) {
     val user = FirebaseAuth.getInstance().currentUser
     var chats by remember { mutableStateOf<List<ChatPreview>>(emptyList()) }
@@ -84,7 +85,7 @@ fun ChatsScreen(
                             unreadCount    = (doc.getLong("unreadBySender") ?: 0L).toInt(),
                             isOwner        = false
                         )
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { android.util.Log.e("ChatsScreen", "Failed to parse chat doc", e) }
                 }
                 senderReady = true
                 merge()
@@ -106,7 +107,7 @@ fun ChatsScreen(
                             unreadCount    = (doc.getLong("unreadByOwner") ?: 0L).toInt(),
                             isOwner        = true
                         )
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { android.util.Log.e("ChatsScreen", "Failed to parse chat doc", e) }
                 }
                 ownerReady = true
                 merge()
@@ -121,20 +122,19 @@ fun ChatsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Chats", fontWeight = FontWeight.Bold)
                         if (totalUnread > 0) {
                             Surface(shape = CircleShape, color = OrangeAccent) {
-                                Text(
-                                    "$totalUnread",
-                                    color = Color.White, fontSize = 11.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                Text("$totalUnread", color = Color.White, fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
                         }
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onWandaaAiClick) {
+                        Text("WANDAA AI", fontWeight = FontWeight.Bold, color = OrangeAccent, fontSize = 13.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -149,15 +149,12 @@ fun ChatsScreen(
                         Icon(Icons.Default.ChatBubbleOutline, contentDescription = null,
                             modifier = Modifier.size(64.dp), tint = Color.Gray)
                         Spacer(Modifier.height(16.dp))
-                        Text("Sign in to see your chats",
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Sign in to see your chats", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-                        Text("Your conversations will appear here",
-                            style = MaterialTheme.typography.bodyMedium,
+                        Text("Your conversations will appear here", style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF888888), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = onLoginRequired,
+                        Button(onClick = onLoginRequired,
                             colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary),
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(25.dp)
@@ -176,24 +173,19 @@ fun ChatsScreen(
                         Icon(Icons.Default.ChatBubbleOutline, contentDescription = null,
                             modifier = Modifier.size(64.dp), tint = Color.Gray)
                         Spacer(Modifier.height(16.dp))
-                        Text("No chats yet",
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("No chats yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Send an inquiry on any listing to start chatting",
+                        Text("Send an inquiry on any listing to start chatting",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF888888), textAlign = TextAlign.Center
-                        )
+                            color = Color(0xFF888888), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = onExplore,
+                        Button(onClick = onExplore,
                             modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary),
                             shape = RoundedCornerShape(25.dp)
                         ) { Text("Explore Listings", fontWeight = FontWeight.Bold) }
                         Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = onPostAd,
+                        OutlinedButton(onClick = onPostAd,
                             modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
                             shape = RoundedCornerShape(25.dp)
                         ) { Text("Post an Ad", fontWeight = FontWeight.Bold) }
@@ -220,72 +212,42 @@ private fun ChatCard(chat: ChatPreview, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (chat.unreadCount > 0) Color(0xFFF0F4FF) else Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = if (chat.unreadCount > 0) Color(0xFFF0F4FF) else Color.White),
         elevation = CardDefaults.cardElevation(if (chat.unreadCount > 0) 3.dp else 2.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+        Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = if (chat.isOwner) OrangeAccent else NavyPrimary,
-                modifier = Modifier.size(48.dp)
-            ) {
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(shape = CircleShape, color = if (chat.isOwner) OrangeAccent else NavyPrimary,
+                modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        chat.otherPartyName.firstOrNull()?.uppercase() ?: "?",
-                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp
-                    )
+                    Text(chat.otherPartyName.firstOrNull()?.uppercase() ?: "?",
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        chat.listingTitle,
+                Row(horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(chat.listingTitle,
                         fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        formatChatTime(chat.timestamp),
-                        fontSize = 10.sp,
-                        color = if (chat.unreadCount > 0) NavyPrimary else Color.LightGray
-                    )
+                        fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(formatChatTime(chat.timestamp), fontSize = 10.sp,
+                        color = if (chat.unreadCount > 0) NavyPrimary else Color.LightGray)
                 }
                 Spacer(Modifier.height(2.dp))
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(chat.otherPartyName, fontSize = 12.sp, color = Color.Gray)
-                        Text(
-                            chat.lastMessage,
-                            fontSize = 12.sp,
+                        Text(chat.lastMessage, fontSize = 12.sp,
                             color = if (chat.unreadCount > 0) Color.DarkGray else Color.Gray,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontWeight = if (chat.unreadCount > 0) FontWeight.Medium else FontWeight.Normal
-                        )
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            fontWeight = if (chat.unreadCount > 0) FontWeight.Medium else FontWeight.Normal)
                     }
                     if (chat.unreadCount > 0) {
                         Surface(shape = CircleShape, color = OrangeAccent) {
-                            Text(
-                                "${chat.unreadCount}",
-                                color = Color.White, fontSize = 10.sp,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Text("${chat.unreadCount}", color = Color.White, fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                     } else {
                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
@@ -300,10 +262,10 @@ private fun formatChatTime(timestamp: Long): String {
     if (timestamp == 0L) return ""
     val diff = System.currentTimeMillis() - timestamp
     return when {
-        diff < 60000    -> "now"
-        diff < 3600000  -> "${diff / 60000}m"
-        diff < 86400000 -> "${diff / 3600000}h"
+        diff < 60000     -> "now"
+        diff < 3600000   -> "${diff / 60000}m"
+        diff < 86400000  -> "${diff / 3600000}h"
         diff < 604800000 -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))
-        else            -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(timestamp))
+        else             -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(timestamp))
     }
 }

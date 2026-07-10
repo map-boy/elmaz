@@ -78,7 +78,12 @@ class ChatViewModel @Inject constructor() : ViewModel() {
                                     "updatedAt"   to now,
                                     unreadField   to current + 1
                                 )
-                            )
+                            ).addOnFailureListener {
+                                android.util.Log.e("ChatViewModel", "Failed to update inquiry", it)
+                            }
+                        }
+                        .addOnFailureListener {
+                            android.util.Log.e("ChatViewModel", "Failed to fetch inquiry for update", it)
                         }
                 }
         }

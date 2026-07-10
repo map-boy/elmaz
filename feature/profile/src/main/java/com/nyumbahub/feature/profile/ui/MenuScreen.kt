@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.feature.profile.ui
+package com.nyumbahub.feature.profile.ui
 
 import android.content.Intent
 import android.net.Uri
@@ -172,8 +172,9 @@ fun MenuScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
+                val localCtx = LocalContext.current
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { }) {
+                    modifier = Modifier.clickable { localCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://vaf-ubwenge-tech.vercel.app/"))) }) {
                     Text("Powered by", fontSize = 11.sp, color = Color.Gray)
                     Text("VAF UBWENGE TECH", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = NavyPrimary)
                 }

@@ -1,4 +1,4 @@
-package com.nyumbahub.feature.post.ui
+﻿package com.nyumbahub.feature.post.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,11 +34,32 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import com.nyumbahub.core.domain.model.ListingType
+import com.nyumbahub.core.domain.model.PropertyType
 import com.nyumbahub.core.ui.theme.NavyPrimary
 import com.nyumbahub.core.ui.theme.OrangeAccent
 import com.nyumbahub.feature.post.viewmodel.PostListingViewModel
 import com.nyumbahub.feature.post.viewmodel.PostUiState
 import java.util.UUID
+
+private fun mapPropertyType(purpose: String, category: String): PropertyType = when {
+    category == "Land / Plot" -> PropertyType.LAND
+    category == "Commercial" -> PropertyType.COMMERCIAL
+    category == "Rooms For Rent" -> PropertyType.STUDIO
+    purpose == "Apartments" -> PropertyType.APARTMENT
+    purpose == "Find Roommates" -> PropertyType.STUDIO
+    else -> PropertyType.HOUSE
+}
+
+private fun mapFurnished(furnished: String): Boolean =
+    furnished == "Furnished" || furnished == "Semi-Furnished"
+
+private fun buildAmenities(furnished: String, rentPeriod: String): List<String> {
+    val list = mutableListOf<String>()
+    if (furnished == "Semi-Furnished") list.add("Semi-Furnished")
+    if (rentPeriod.isNotBlank()) list.add("Rent Period: $rentPeriod")
+    return list
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,11 +67,13 @@ fun PostListingScreen(
     onBack: () -> Unit,
     onSuccess: () -> Unit,
     onLoginRequired: () -> Unit = {},
+    onMotorsSelected: () -> Unit = {},
     viewModel: PostListingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var step by remember { mutableIntStateOf(0) }
     var listingPurpose by remember { mutableStateOf("") }
+    var transactionType by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -86,7 +109,11 @@ fun PostListingScreen(
                 city          = city,
                 district      = district,
                 neighbourhood = neighbourhood,
-                imageUrls     = urls
+                imageUrls     = urls,
+                listingType   = if (transactionType == "For Sale") ListingType.SALE else ListingType.RENT,
+                propertyType  = mapPropertyType(listingPurpose, category),
+                furnished     = mapFurnished(furnished),
+                amenities     = buildAmenities(furnished, rentPeriod)
             )
         }
         if (selectedImages.isEmpty()) { doSubmit(emptyList()); return }
@@ -133,10 +160,23 @@ fun PostListingScreen(
         containerColor = Color(0xFFF5F5F5)
     ) { padding ->
         when (step) {
-            0 -> StepPurpose(padding) { purpose -> listingPurpose = purpose; step = 1 }
-            1 -> StepCategory(padding, listingPurpose) { cat -> category = cat; step = 2 }
-            2 -> StepDetails(
-                padding, listingPurpose, title, description, price, currency,
+            0 -> StepPurpose(padding) { purpose ->
+                if (purpose == "Motors") {
+                    onMotorsSelected()
+                } else {
+                    listingPurpose = purpose
+                    if (purpose == "Find Roommates") {
+                        transactionType = "For Rent"
+                        step = 2
+                    } else {
+                        step = 1
+                    }
+                }
+            }
+            1 -> StepTransactionType(padding) { t -> transactionType = t; step = 2 }
+            2 -> StepCategory(padding, transactionType) { cat -> category = cat; step = 3 }
+            3 -> StepDetails(
+                padding, transactionType, title, description, price, currency,
                 bedrooms, bathrooms, sizeSqm, furnished, rentPeriod,
                 onTitleChange = { title = it },
                 onDescChange = { description = it },
@@ -147,15 +187,15 @@ fun PostListingScreen(
                 onSizeChange = { sizeSqm = it },
                 onFurnishedChange = { furnished = it },
                 onRentPeriodChange = { rentPeriod = it },
-                onNext = { step = 3 }
+                onNext = { step = 4 }
             )
-            3 -> StepImages(
+            4 -> StepImages(
                 padding = padding,
                 selectedImages = selectedImages,
                 onImagesSelected = { selectedImages = it },
-                onNext = { step = 4 }
+                onNext = { step = 5 }
             )
-            4 -> StepLocation(
+            5 -> StepLocation(
                 padding, city, district, neighbourhood,
                 onCityChange = { city = it },
                 onDistrictChange = { district = it },
@@ -168,6 +208,40 @@ fun PostListingScreen(
                     else uploadImagesAndSubmit(uid)
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun StepTransactionType(padding: PaddingValues, onSelect: (String) -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+        Text("For Sale or For Rent?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("Choose how you want to list this property", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF888888))
+        Spacer(Modifier.height(24.dp))
+        listOf(
+            Triple("For Sale", Icons.Default.ShoppingCart, "List this property for sale"),
+            Triple("For Rent", Icons.Default.DateRange, "List this property for rent")
+        ).forEach { (label, icon, sub) ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { onSelect(label) },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(48.dp).background(NavyPrimary.copy(alpha = 0.09f), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(26.dp))
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(sub, style = MaterialTheme.typography.bodySmall, color = Color(0xFF888888))
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFFBBBBBB))
+                }
+            }
         }
     }
 }
@@ -304,12 +378,12 @@ fun StepPurpose(padding: PaddingValues, onSelect: (String) -> Unit) {
 }
 
 @Composable
-fun StepCategory(padding: PaddingValues, purpose: String, onSelect: (String) -> Unit) {
+fun StepCategory(padding: PaddingValues, transactionType: String, onSelect: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
         Text("Choose the right category:",
             style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
-        val cats = if (purpose == "For Rent")
+        val cats = if (transactionType == "For Rent")
             listOf("Residential","Commercial","Rooms For Rent","Monthly Short Term","Daily Short Term")
         else listOf("Residential","Commercial","Land / Plot")
         cats.forEach { cat ->
@@ -336,7 +410,7 @@ fun StepCategory(padding: PaddingValues, purpose: String, onSelect: (String) -> 
 @Composable
 fun StepDetails(
     padding: PaddingValues,
-    purpose: String,
+    transactionType: String,
     title: String, description: String, price: String, currency: String,
     bedrooms: String, bathrooms: String, sizeSqm: String, furnished: String, rentPeriod: String,
     onTitleChange: (String) -> Unit, onDescChange: (String) -> Unit,
@@ -382,7 +456,7 @@ fun StepDetails(
                 SelectChip(opt, furnished == opt) { onFurnishedChange(opt) }
             }
         }
-        if (purpose == "For Rent") {
+        if (transactionType == "For Rent") {
             Text("Rent Period", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Yearly","Quarterly","Monthly","Daily").forEach { opt ->
@@ -468,11 +542,6 @@ fun StepLocation(
         Spacer(Modifier.height(16.dp))
     }
 }
-
-
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

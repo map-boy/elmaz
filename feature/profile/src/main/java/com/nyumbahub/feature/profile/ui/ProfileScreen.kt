@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nyumbahub.core.ui.components.ListingCard
+import com.nyumbahub.feature.profile.viewmodel.DeleteAccountState
 import com.nyumbahub.feature.profile.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,12 +27,59 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val user        by viewModel.currentUser.collectAsState()
-    val myListings  by viewModel.myListings.collectAsState()
-    val saved       by viewModel.savedListings.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val user             by viewModel.currentUser.collectAsState()
+    val myListings       by viewModel.myListings.collectAsState()
+    val saved            by viewModel.savedListings.collectAsState()
+    val deleteState       by viewModel.deleteAccountState.collectAsState()
+    val deleteErrorMessage by viewModel.deleteErrorMessage.collectAsState()
+    var selectedTab      by remember { mutableIntStateOf(0) }
+    var showDeleteDialog  by remember { mutableStateOf(false) }
 
     LaunchedEffect(user) { user?.id?.let { viewModel.loadData(it) } }
+
+    LaunchedEffect(deleteState) {
+        if (deleteState == DeleteAccountState.SUCCESS) {
+            viewModel.resetDeleteState()
+            onSignOut()
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (deleteState != DeleteAccountState.LOADING) showDeleteDialog = false },
+            title = { Text("Delete Account") },
+            text = {
+                Column {
+                    Text(
+                        "This permanently deletes your account, listings, messages, saved items, " +
+                        "and subscription. This cannot be undone."
+                    )
+                    if (deleteState == DeleteAccountState.ERROR && deleteErrorMessage != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(deleteErrorMessage ?: "", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = deleteState != DeleteAccountState.LOADING,
+                    onClick = { viewModel.deleteAccount() }
+                ) {
+                    if (deleteState == DeleteAccountState.LOADING) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = deleteState != DeleteAccountState.LOADING,
+                    onClick = { showDeleteDialog = false; viewModel.resetDeleteState() }
+                ) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -106,6 +154,17 @@ fun ProfileScreen(
                         onClick = { onListingClick(listing.id) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     )
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                TextButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                ) {
+                    Text("Delete Account", color = MaterialTheme.colorScheme.error)
                 }
             }
         }

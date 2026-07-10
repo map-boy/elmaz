@@ -1,4 +1,4 @@
-﻿package com.nyumbahub.feature.listings.ui
+package com.nyumbahub.feature.listings.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -65,7 +65,7 @@ fun RoomsScreen(
     onPostRoom: () -> Unit
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
-    var rooms by remember { mutableStateOf(demoRooms) }
+    var rooms by remember { mutableStateOf(emptyList<Room>()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -87,7 +87,7 @@ fun RoomsScreen(
                         )
                     } catch (e: Exception) { null }
                 }
-                rooms = if (fetched.isEmpty()) demoRooms else fetched
+                rooms = fetched
                 isLoading = false
             }
             .addOnFailureListener { isLoading = false }
@@ -146,6 +146,14 @@ fun RoomsScreen(
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = NavyPrimary)
+                }
+            } else if (filtered.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Bed, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(56.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text("No rooms available yet", color = Color.Gray, fontSize = 14.sp)
+                    }
                 }
             } else {
                 LazyColumn(

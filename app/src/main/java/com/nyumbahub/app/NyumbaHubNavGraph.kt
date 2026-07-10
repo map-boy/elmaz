@@ -3,6 +3,8 @@
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,6 +33,7 @@ import com.nyumbahub.feature.motors.ui.MotorDetailScreen
 import com.nyumbahub.feature.motors.ui.MotorsCategoryScreen
 import com.nyumbahub.feature.motors.ui.MotorsScreen
 import com.nyumbahub.feature.post.ui.PostListingScreen
+import com.nyumbahub.feature.post.ui.PostMotorScreen
 import com.nyumbahub.feature.profile.ui.AgentScreen
 import com.nyumbahub.feature.profile.ui.EditProfileScreen
 import com.nyumbahub.feature.profile.ui.MenuScreen
@@ -65,6 +68,7 @@ object Routes {
     const val TERMS         = "terms"
     const val PRIVACY       = "privacy"
     const val MOTORS        = "motors"
+    const val POST_MOTOR    = "post_motor"
     const val MOTORS_LIST   = "motors_list/{category}"
     const val MOTOR_DETAIL  = "motor_detail/{motorId}"
     const val FILTER        = "filter"
@@ -78,6 +82,7 @@ object Routes {
     const val APARTMENTS    = "apartments_category"
     const val NOTIF_PREFS   = "notif_prefs_screen"
     const val ADMIN         = "admin_panel"
+    const val WANDAA_AI     = "wandaa_ai"
 }
 
 data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
@@ -161,10 +166,10 @@ fun NyumbaHubNavGraph() {
             }
             composable(Routes.FAVORITES) { FavoritesScreen(onListingClick = { id -> nav.navigate("listing/$id") }, onLoginRequired = { nav.navigate(Routes.LOGIN) }) }
             composable(Routes.POST) {
-                PostListingScreen(onBack = { nav.popBackStack() }, onSuccess = { nav.navigate(Routes.HOME) { popUpTo(Routes.POST) { inclusive = true } } }, onLoginRequired = { nav.navigate(Routes.LOGIN) })
+                PostListingScreen(onBack = { nav.popBackStack() }, onSuccess = { nav.navigate(Routes.HOME) { popUpTo(Routes.POST) { inclusive = true } } }, onLoginRequired = { nav.navigate(Routes.LOGIN) }, onMotorsSelected = { nav.navigate(Routes.POST_MOTOR) })
             }
             composable(Routes.CHATS) {
-                ChatsScreen(onChatClick = { id -> nav.navigate("chat/$id") }, onLoginRequired = { nav.navigate(Routes.LOGIN) }, onExplore = { nav.navigate(Routes.HOME) }, onPostAd = { nav.navigate(Routes.POST) })
+                ChatsScreen(onChatClick = { id -> nav.navigate("chat/$id") }, onLoginRequired = { nav.navigate(Routes.LOGIN) }, onExplore = { nav.navigate(Routes.HOME) }, onPostAd = { nav.navigate(Routes.POST) }, onWandaaAiClick = { nav.navigate(Routes.WANDAA_AI) })
             }
             composable(Routes.MENU) {
                 MenuScreen(
@@ -203,6 +208,7 @@ fun NyumbaHubNavGraph() {
                 val inquiryId = backStack.arguments?.getString("inquiryId") ?: return@composable
                 ChatScreen(inquiryId = inquiryId, currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "", onBack = { nav.popBackStack() })
             }
+            composable(Routes.WANDAA_AI) { WandaaAiChatScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.PLANS) { SubscriptionScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.FILTER) { PropertyFilterScreen(onBack = { nav.popBackStack() }, onApply = { nav.navigate(Routes.SEARCH) }) }
             composable(Routes.MAP) { MapScreen(onBack = { nav.popBackStack() }, onListingClick = { id -> nav.navigate("listing/$id") }) }
@@ -217,7 +223,7 @@ fun NyumbaHubNavGraph() {
             composable(Routes.SAVED) { SavedListingsScreen(onBack = { nav.popBackStack() }, onListingClick = { id -> nav.navigate("listing/$id") }) }
             composable(Routes.MOTORS_LIST) { backStack ->
                 val cat = backStack.arguments?.getString("category") ?: ""
-                MotorsScreen(onBack = { nav.popBackStack() }, onMotorClick = { id -> nav.navigate("motor_detail/$id") }, onPostMotor = { nav.navigate(Routes.POST) })
+                MotorsScreen(onBack = { nav.popBackStack() }, onMotorClick = { id -> nav.navigate("motor_detail/$id") }, onPostMotor = { nav.navigate(Routes.POST_MOTOR) })
             }
             composable(Routes.MOTOR_DETAIL) { backStack ->
                 val motorId = backStack.arguments?.getString("motorId") ?: return@composable
@@ -230,14 +236,24 @@ fun NyumbaHubNavGraph() {
                     }
                 })
             }
+            composable(Routes.POST_MOTOR) {
+                PostMotorScreen(padding = PaddingValues(0.dp), onBack = { nav.popBackStack() }, onSuccess = { nav.navigate(Routes.HOME) { popUpTo(Routes.POST_MOTOR) { inclusive = true } } })
+            }
             composable(Routes.OFF_PLAN) { OffPlanScreen(onBack = { nav.popBackStack() }, onProjectClick = { nav.navigate(Routes.FILTER) }) }
             composable(Routes.VALUATION) { ValuationScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.EDIT_PROFILE) { EditProfileScreen(onBack = { nav.popBackStack() }) }
-            composable(Routes.AGENTS) { AgentScreen(onBack = { nav.popBackStack() }, onAgentClick = { }) }
+            composable(Routes.AGENTS) {
+                val agentCtx = LocalContext.current
+                AgentScreen(onBack = { nav.popBackStack() }, onAgentClick = {
+                    android.widget.Toast.makeText(agentCtx, "Agent profile coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                })
+            }
             composable(Routes.HOUSES) { HousesCategoryScreen(onBack = { nav.popBackStack() }, onCategoryClick = { nav.navigate(Routes.FILTER) }, onPostClick = { nav.navigate(Routes.POST) }) }
             composable(Routes.APARTMENTS) { ApartmentsCategoryScreen(onBack = { nav.popBackStack() }, onCategoryClick = { nav.navigate(Routes.FILTER) }, onPostClick = { nav.navigate(Routes.POST) }) }
             composable(Routes.ROOMS) { RoomsScreen(onBack = { nav.popBackStack() }, onRoomClick = { id -> nav.navigate("listing/$id") }, onPostRoom = { nav.navigate(Routes.POST) }) }
-            composable(Routes.MOTORS) { MotorsCategoryScreen(onBack = { nav.popBackStack() }, onCategoryClick = { nav.navigate(Routes.MOTORS_LIST.replace("{category}", it)) }, onSellClick = { nav.navigate(Routes.POST) }) }
+            composable(Routes.MOTORS) { MotorsCategoryScreen(onBack = { nav.popBackStack() }, onCategoryClick = { nav.navigate(Routes.MOTORS_LIST.replace("{category}", it)) }, onSellClick = { nav.navigate(Routes.POST_MOTOR) }) }
         }
     }
 }
+
+

@@ -12,9 +12,9 @@ interface ListingRepository {
     suspend fun createListing(listing: Listing): Result<String>
     suspend fun updateListing(listing: Listing): Result<Unit>
     suspend fun deleteListing(id: String): Result<Unit>
-    suspend fun saveListing(listingId: String): Result<Unit>
-    suspend fun unsaveListing(listingId: String): Result<Unit>
-    fun getSavedListings(): Flow<List<Listing>>
+    suspend fun saveListing(userId: String, listingId: String): Result<Unit>
+    suspend fun unsaveListing(userId: String, listingId: String): Result<Unit>
+    fun getSavedListings(userId: String): Flow<List<Listing>>
     suspend fun sendInquiry(inquiry: Inquiry, message: String): Result<Inquiry>
     fun getMyListings(userId: String): Flow<List<Listing>>
     suspend fun incrementViewCount(id: String)
